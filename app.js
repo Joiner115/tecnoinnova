@@ -22,7 +22,7 @@ async function cargarInventario() {
         return;
     }
 
-    const tbody = document.querySelector("#tabla-inventario tbody");
+    const tbody = document.querySelector("table tbody") || document.querySelector("tbody");
     tbody.innerHTML = "";
     articulos.forEach(art => {
         const fila = `
@@ -48,7 +48,7 @@ async function cargarPedidos() {
         return;
     }
 
-    const tbody = document.querySelector("#tabla-pedidos tbody");
+    const tbody = document.querySelectorAll("tbody")[1] || document.querySelector("tbody");
     tbody.innerHTML = "";
     listadoPedidos.forEach(ped => {
         const fila = `
