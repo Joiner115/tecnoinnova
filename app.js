@@ -23,7 +23,7 @@ async function cargarInventario() {
     }
 
     const tbody = document.querySelector("table tbody") || document.querySelector("tbody");
-    tbody.innerHTML = "";
+   tbody.innerHTML = "";
     articulos.forEach(art => {
         const fila = `
             <tr>
@@ -49,7 +49,7 @@ async function cargarPedidos() {
     }
 
     const tbody = document.querySelectorAll("tbody")[1] || document.querySelector("tbody");
-    tbody.innerHTML = "";
+   tbody.innerHTML = "";
     listadoPedidos.forEach(ped => {
         const fila = `
             <tr>
