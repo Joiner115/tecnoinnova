@@ -1,10 +1,10 @@
-// Credenciales del proyecto jdxualgehibgadkddtbc de TecnoInnova S.A.
+
 const SUPABASE_URL = "https://jdxualgehibgadkddtbc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkeHVhbGdlaGliZ2Fka2RkdGJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4ODQ0OTMsImV4cCI6MjA5OTQ2MDQ5M30.KtjQlJqEdn5YB3CeBmtYvqyzt3aCofhEbH-9jOkLgGE";
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Cargar los datos al iniciar la app
+// Cargar los datos globales al iniciar la app
 document.addEventListener("DOMContentLoaded", () => {
     cargarInventario();
     cargarPedidos();
@@ -22,9 +22,10 @@ async function cargarInventario() {
         return;
     }
 
-    const tbody = document.querySelector("table tbody") || document.querySelector("tbody");
-    if (!tbody) return;
+    const tbodies = document.querySelectorAll("tbody");
+    if (tbodies.length === 0) return;
     
+    const tbody = tbodies[0];
     tbody.innerHTML = "";
     articulos.forEach(art => {
         const fila = `
@@ -51,9 +52,9 @@ async function cargarPedidos() {
     }
 
     const tbodies = document.querySelectorAll("tbody");
-    const tbody = tbodies[1] || tbodies[0];
-    if (!tbody) return;
+    if (tbodies.length < 2) return;
 
+    const tbody = tbodies[1];
     tbody.innerHTML = "";
     listadoPedidos.forEach(ped => {
         const fila = `
@@ -80,7 +81,7 @@ function configurarFormularios() {
 
             const { data, error } = await supabase
                 .from('usuarios')
-                .insert([{ nombre, email, contrasena, rol: 'Vendedor' }]);
+                .insert([{ nombre, email, contrasena }]);
 
             if (error) {
                 alert("Error al registrar: " + error.message);
@@ -91,7 +92,7 @@ function configurarFormularios() {
         });
     }
 
-    // Login en el sistema con validación de Sesión / Rol
+    // Login en el sistema
     const loginForm = document.getElementById("login-form");
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {
@@ -109,16 +110,13 @@ function configurarFormularios() {
                 alert("Acceso denegado. Verifica los datos introducidos.");
             } else {
                 const usuario = usuarios[0];
-                alert(`¡Acceso concedido! Bienvenido/a, ${usuario.nombre} (${usuario.rol || 'Usuario'}).`);
+                alert(`¡Acceso concedido! Bienvenido/a, ${usuario.nombre}.`);
                 
-                // Mostrar el panel de datos cuando inicia sesión
-                const dashboard = document.getElementById("dashboard") || document.getElementById("contenido-privado");
-                if (dashboard) {
-                    dashboard.style.display = "block";
-                }
-
-                // Ocultar el formulario de login al iniciar sesión
-                loginForm.style.display = "none";
+                // Recargar las tablas para asegurar que se muestren los datos
+                cargarInventario();
+                cargarPedidos();
+                
+                loginForm.reset();
             }
         });
     }
