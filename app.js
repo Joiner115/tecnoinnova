@@ -4,84 +4,97 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 window.supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-// Al cargar la página preparamos los formularios y mostramos estado inicial de tablas
+// Inicialización de la aplicación
 document.addEventListener("DOMContentLoaded", () => {
     configurarFormularios();
-    limpiarTablas("Inicia sesión como Administrador para visualizar los datos del sistema.");
+    estadoInicialVistas();
 });
 
-// Mensaje en las tablas
-function limpiarTablas(mensaje) {
+// Mensaje por defecto en las tablas antes de autenticarse
+function estadoInicialVistas() {
     const tbodies = document.querySelectorAll("tbody");
     tbodies.forEach(tbody => {
-        tbody.innerHTML = `<tr><td colspan='5' style='text-align:center; color: #888;'>${mensaje}</td></tr>`;
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; color: #888;'>Inicia sesión para consultar la información del sistema.</td></tr>";
     });
 }
 
-// Obtener y renderizar los equipos de seguridad
-async function cargarInventario() {
+// Cargar la vista completa para Administradores (Equipos + Pedidos/Técnicos)
+async function cargarVistaAdmin() {
     if (!window.supabaseClient) return;
 
-    const { data: articulos, error } = await window.supabaseClient
-        .from('inventario')
-        .select('*');
+    // 1. Cargar Equipos de Seguridad
+    const { data: articulos } = await window.supabaseClient.from('inventario').select('*');
+    const tbodies = document.querySelectorAll("tbody");
 
-    if (error) {
-        console.error("Error al consultar el inventario:", error);
-        return;
+    if (tbodies.length > 0 && articulos) {
+        tbodies[0].innerHTML = "";
+        articulos.forEach(art => {
+            tbodies[0].innerHTML += `
+                <tr>
+                    <td><strong>${art.nombre_equipo}</strong></td>
+                    <td>${art.categoria}</td>
+                    <td>$${art.precio_venta}</td>
+                    <td>${art.stock} uds.</td>
+                </tr>
+            `;
+        });
     }
 
-    const tbodies = document.querySelectorAll("tbody");
-    if (tbodies.length === 0) return;
-
-    const tbody = tbodies[0];
-    tbody.innerHTML = "";
-    articulos.forEach(art => {
-        const fila = `
-            <tr>
-                <td><strong>${art.nombre_equipo}</strong></td>
-                <td>${art.categoria}</td>
-                <td>$${art.precio_venta}</td>
-                <td>${art.stock} uds.</td>
-            </tr>
-        `;
-        tbody.innerHTML += fila;
-    });
+    // 2. Cargar Pedidos y Asignación
+    await cargarGestionPedidos(true);
 }
 
-// Obtener y renderizar el control de pedidos
-async function cargarPedidos() {
-    if (!window.supabaseClient) return;
+// Cargar la vista restringida para Usuario Normal (Solo Pedidos/Técnicos)
+async function cargarVistaUsuario() {
+    const tbodies = document.querySelectorAll("tbody");
 
-    const { data: listadoPedidos, error } = await window.supabaseClient
-        .from('pedidos')
-        .select('*');
-
-    if (error) {
-        console.error("Error al consultar pedidos:", error);
-        return;
+    // Bloquear/ocultar la primera tabla (Equipos de Seguridad)
+    if (tbodies.length > 0) {
+        tbodies[0].innerHTML = "<tr><td colspan='4' style='text-align:center; color: #d9534f; font-weight: bold;'>Acceso restringido: Se requieren permisos de Administrador para ver los equipos.</td></tr>";
     }
 
-    const tbodies = document.querySelectorAll("tbody");
-    const tbody = tbodies[1] || tbodies[0];
-    if (!tbody) return;
+    // Permitir acceso total a Gestión de Pedidos y Asignación de Técnicos
+    await cargarGestionPedidos(false);
+}
 
-    tbody.innerHTML = "";
+// Obtener y renderizar el control de pedidos con acción de asignación de técnicos
+async function cargarGestionPedidos(esAdmin) {
+    if (!window.supabaseClient) return;
+
+    const { data: listadoPedidos, error } = await window.supabaseClient.from('pedidos').select('*');
+    if (error) return;
+
+    const tbodies = document.querySelectorAll("tbody");
+    const tbodyPedidos = tbodies[1] || tbodies[0];
+    if (!tbodyPedidos) return;
+
+    tbodyPedidos.innerHTML = "";
     listadoPedidos.forEach(ped => {
-        const fila = `
+        tbodyPedidos.innerHTML += `
             <tr>
                 <td>Pedido #${ped.id}</td>
                 <td>$${ped.total_facturado}</td>
                 <td><span class="badge ${ped.estado ? ped.estado.toLowerCase().replace(' ', '-') : ''}">${ped.estado}</span></td>
+                <td>
+                    <button onclick="asignarTecnico(${ped.id})" style="padding: 4px 8px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px;">
+                        Asignar Técnico
+                    </button>
+                </td>
             </tr>
         `;
-        tbody.innerHTML += fila;
     });
 }
 
-// Manejar el Registro y el Login
+// Función global interactiva para la asignación de técnicos
+window.asignarTecnico = function(idPedido) {
+    const tecnico = prompt(`Ingrese el nombre o ID del técnico asignado al Pedido #${idPedido}:`);
+    if (tecnico && tecnico.trim() !== "") {
+        alert(`Técnico "${tecnico}" asignado con éxito al Pedido #${idPedido}.`);
+    }
+};
+
+// Configurar comportamiento de login y registro
 function configurarFormularios() {
-    // Registrar nuevo usuario/empleado (por defecto asigna rol 'Usuario' o 'Vendedor')
     const regForm = document.getElementById("register-form");
     if (regForm) {
         regForm.addEventListener("submit", async (e) => {
@@ -90,7 +103,7 @@ function configurarFormularios() {
             const email = document.getElementById("reg-email").value;
             const contrasena = document.getElementById("reg-password").value;
 
-            const { data, error } = await window.supabaseClient
+            const { error } = await window.supabaseClient
                 .from('usuarios')
                 .insert([{ nombre, email, contrasena, rol: 'Usuario' }]);
 
@@ -103,7 +116,6 @@ function configurarFormularios() {
         });
     }
 
-    // Login en el sistema
     const loginForm = document.getElementById("login-form");
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {
@@ -118,18 +130,17 @@ function configurarFormularios() {
                 .eq('contrasena', contrasena);
 
             if (error || !usuarios || usuarios.length === 0) {
-                alert("Acceso denegado. Verifica los datos introducidos.");
+                alert("Acceso denegado. Verifica las credenciales.");
             } else {
                 const usuario = usuarios[0];
-                
-                // VALIDACIÓN DE ROL:
-                if (usuario.rol === 'Administrador' || usuario.rol === 'admin') {
-                    alert(`¡Acceso concedido! Bienvenido/a Administrador/a, ${usuario.nombre}.`);
-                    await cargarInventario();
-                    await cargarPedidos();
+                const esAdmin = usuario.rol === 'Administrador' || usuario.rol === 'admin';
+
+                if (esAdmin) {
+                    alert(`¡Acceso de Administrador concedido! Bienvenido/a, ${usuario.nombre}.`);
+                    await cargarVistaAdmin();
                 } else {
-                    alert(`Bienvenido/a, ${usuario.nombre}. Tu rol es (${usuario.rol || 'Usuario'}). No tienes permisos de Administrador para ver los datos.`);
-                    limpiarTablas("Acceso denegado: Se requieren permisos de Administrador.");
+                    alert(`¡Acceso Concedido! Bienvenido/a, ${usuario.nombre}. Rol: Usuario Normal.`);
+                    await cargarVistaUsuario();
                 }
 
                 loginForm.reset();
