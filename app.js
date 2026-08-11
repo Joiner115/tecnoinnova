@@ -1,8 +1,9 @@
-
+// Credenciales del proyecto TecnoInnova S.A.
 const SUPABASE_URL = "https://jdxualgehibgadkddtbc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkeHVhbGdlaGliZ2Fka2RkdGJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4ODQ0OTMsImV4cCI6MjA5OTQ2MDQ5M30.KtjQlJqEdn5YB3CeBmtYvqyzt3aCofhEbH-9jOkLgGE";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Reasignación limpia sin declarar 'supabase' con const/let nuevamente
+window.supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 // Cargar los datos globales al iniciar la app
 document.addEventListener("DOMContentLoaded", () => {
@@ -13,7 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Obtener y renderizar los equipos de seguridad
 async function cargarInventario() {
-    const { data: articulos, error } = await supabase
+    if (!window.supabaseClient) return;
+
+    const { data: articulos, error } = await window.supabaseClient
         .from('inventario')
         .select('*');
 
@@ -22,10 +25,9 @@ async function cargarInventario() {
         return;
     }
 
-    const tbodies = document.querySelectorAll("tbody");
-    if (tbodies.length === 0) return;
-    
-    const tbody = tbodies[0];
+    const tbody = document.querySelector("table tbody") || document.querySelector("tbody");
+    if (!tbody) return;
+
     tbody.innerHTML = "";
     articulos.forEach(art => {
         const fila = `
@@ -42,7 +44,9 @@ async function cargarInventario() {
 
 // Obtener y renderizar el control de pedidos
 async function cargarPedidos() {
-    const { data: listadoPedidos, error } = await supabase
+    if (!window.supabaseClient) return;
+
+    const { data: listadoPedidos, error } = await window.supabaseClient
         .from('pedidos')
         .select('*');
 
@@ -52,16 +56,16 @@ async function cargarPedidos() {
     }
 
     const tbodies = document.querySelectorAll("tbody");
-    if (tbodies.length < 2) return;
+    const tbody = tbodies[1] || tbodies[0];
+    if (!tbody) return;
 
-    const tbody = tbodies[1];
     tbody.innerHTML = "";
     listadoPedidos.forEach(ped => {
         const fila = `
             <tr>
                 <td>Pedido #${ped.id}</td>
                 <td>$${ped.total_facturado}</td>
-                <td><span class="badge ${ped.estado.toLowerCase().replace(' ', '-')}">${ped.estado}</span></td>
+                <td><span class="badge ${ped.estado ? ped.estado.toLowerCase().replace(' ', '-') : ''}">${ped.estado}</span></td>
             </tr>
         `;
         tbody.innerHTML += fila;
@@ -79,9 +83,9 @@ function configurarFormularios() {
             const email = document.getElementById("reg-email").value;
             const contrasena = document.getElementById("reg-password").value;
 
-            const { data, error } = await supabase
+            const { data, error } = await window.supabaseClient
                 .from('usuarios')
-                .insert([{ nombre, email, contrasena }]);
+                .insert([{ nombre, email, contrasena, rol: 'Vendedor' }]);
 
             if (error) {
                 alert("Error al registrar: " + error.message);
@@ -100,7 +104,7 @@ function configurarFormularios() {
             const email = document.getElementById("login-email").value;
             const contrasena = document.getElementById("login-password").value;
 
-            const { data: usuarios, error } = await supabase
+            const { data: usuarios, error } = await window.supabaseClient
                 .from('usuarios')
                 .select('*')
                 .eq('email', email)
@@ -111,13 +115,12 @@ function configurarFormularios() {
             } else {
                 const usuario = usuarios[0];
                 alert(`¡Acceso concedido! Bienvenido/a, ${usuario.nombre}.`);
-                
-                // Recargar las tablas para asegurar que se muestren los datos
                 cargarInventario();
                 cargarPedidos();
-                
                 loginForm.reset();
             }
         });
+    }
+}
     }
 }
