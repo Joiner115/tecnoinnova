@@ -4,17 +4,17 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 window.supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-// Al cargar la página solo configuramos los formularios y limpiamos las tablas
+// Al cargar la página preparamos los formularios y mostramos estado inicial de tablas
 document.addEventListener("DOMContentLoaded", () => {
     configurarFormularios();
-    limpiarTablas();
+    limpiarTablas("Inicia sesión como Administrador para visualizar los datos del sistema.");
 });
 
-// Deja las tablas vacías antes de iniciar sesión
-function limpiarTablas() {
+// Mensaje en las tablas
+function limpiarTablas(mensaje) {
     const tbodies = document.querySelectorAll("tbody");
     tbodies.forEach(tbody => {
-        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; color: #888;'>Inicia sesión para visualizar los datos del sistema.</td></tr>";
+        tbody.innerHTML = `<tr><td colspan='5' style='text-align:center; color: #888;'>${mensaje}</td></tr>`;
     });
 }
 
@@ -81,6 +81,7 @@ async function cargarPedidos() {
 
 // Manejar el Registro y el Login
 function configurarFormularios() {
+    // Registrar nuevo usuario/empleado (por defecto asigna rol 'Usuario' o 'Vendedor')
     const regForm = document.getElementById("register-form");
     if (regForm) {
         regForm.addEventListener("submit", async (e) => {
@@ -91,17 +92,18 @@ function configurarFormularios() {
 
             const { data, error } = await window.supabaseClient
                 .from('usuarios')
-                .insert([{ nombre, email, contrasena, rol: 'Vendedor' }]);
+                .insert([{ nombre, email, contrasena, rol: 'Usuario' }]);
 
             if (error) {
                 alert("Error al registrar: " + error.message);
             } else {
-                alert("¡Personal registrado con éxito en TecnoInnova S.A.!");
+                alert("¡Usuario registrado con éxito en TecnoInnova S.A.!");
                 regForm.reset();
             }
         });
     }
 
+    // Login en el sistema
     const loginForm = document.getElementById("login-form");
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {
@@ -119,12 +121,17 @@ function configurarFormularios() {
                 alert("Acceso denegado. Verifica los datos introducidos.");
             } else {
                 const usuario = usuarios[0];
-                alert(`¡Acceso concedido! Bienvenido/a, ${usuario.nombre}.`);
                 
-                // Cargar los datos desde Supabase a las tablas
-                await cargarInventario();
-                await cargarPedidos();
-                
+                // VALIDACIÓN DE ROL:
+                if (usuario.rol === 'Administrador' || usuario.rol === 'admin') {
+                    alert(`¡Acceso concedido! Bienvenido/a Administrador/a, ${usuario.nombre}.`);
+                    await cargarInventario();
+                    await cargarPedidos();
+                } else {
+                    alert(`Bienvenido/a, ${usuario.nombre}. Tu rol es (${usuario.rol || 'Usuario'}). No tienes permisos de Administrador para ver los datos.`);
+                    limpiarTablas("Acceso denegado: Se requieren permisos de Administrador.");
+                }
+
                 loginForm.reset();
             }
         });
