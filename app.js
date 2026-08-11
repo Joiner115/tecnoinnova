@@ -4,32 +4,17 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 window.supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-// Al cargar la página solo preparamos los formularios y OCULTAMOS los datos
+// Al cargar la página solo configuramos los formularios y limpiamos las tablas
 document.addEventListener("DOMContentLoaded", () => {
     configurarFormularios();
-    ocultarTablasAlInicio();
+    limpiarTablas();
 });
 
-// Función para ocultar los contenedores/tablas al entrar a la web
-function ocultarTablasAlInicio() {
-    const tablas = document.querySelectorAll("table");
-    tablas.forEach(tabla => {
-        // Busca la sección o div padre de la tabla para ocultarlo completo
-        const contenedor = tabla.closest("section") || tabla.parentElement;
-        if (contenedor) {
-            contenedor.style.display = "none";
-        }
-    });
-}
-
-// Función para mostrar las tablas tras el inicio de sesión
-function mostrarTablas() {
-    const tablas = document.querySelectorAll("table");
-    tablas.forEach(tabla => {
-        const contenedor = tabla.closest("section") || tabla.parentElement;
-        if (contenedor) {
-            contenedor.style.display = "block";
-        }
+// Deja las tablas vacías antes de iniciar sesión
+function limpiarTablas() {
+    const tbodies = document.querySelectorAll("tbody");
+    tbodies.forEach(tbody => {
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; color: #888;'>Inicia sesión para visualizar los datos del sistema.</td></tr>";
     });
 }
 
@@ -46,9 +31,10 @@ async function cargarInventario() {
         return;
     }
 
-    const tbody = document.querySelector("table tbody") || document.querySelector("tbody");
-    if (!tbody) return;
+    const tbodies = document.querySelectorAll("tbody");
+    if (tbodies.length === 0) return;
 
+    const tbody = tbodies[0];
     tbody.innerHTML = "";
     articulos.forEach(art => {
         const fila = `
@@ -95,7 +81,6 @@ async function cargarPedidos() {
 
 // Manejar el Registro y el Login
 function configurarFormularios() {
-    // Registrar nuevo usuario/empleado
     const regForm = document.getElementById("register-form");
     if (regForm) {
         regForm.addEventListener("submit", async (e) => {
@@ -117,7 +102,6 @@ function configurarFormularios() {
         });
     }
 
-    // Login en el sistema
     const loginForm = document.getElementById("login-form");
     if (loginForm) {
         loginForm.addEventListener("submit", async (e) => {
@@ -137,8 +121,7 @@ function configurarFormularios() {
                 const usuario = usuarios[0];
                 alert(`¡Acceso concedido! Bienvenido/a, ${usuario.nombre}.`);
                 
-                // AHORA SÍ: Mostramos las tablas y traemos los datos de Supabase tras loguearse
-                mostrarTablas();
+                // Cargar los datos desde Supabase a las tablas
                 await cargarInventario();
                 await cargarPedidos();
                 
