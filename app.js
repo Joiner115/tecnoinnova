@@ -2,15 +2,36 @@
 const SUPABASE_URL = "https://jdxualgehibgadkddtbc.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkeHVhbGdlaGliZ2Fka2RkdGJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4ODQ0OTMsImV4cCI6MjA5OTQ2MDQ5M30.KtjQlJqEdn5YB3CeBmtYvqyzt3aCofhEbH-9jOkLgGE";
 
-// Inicialización limpia
 window.supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-// Cargar los datos globales al iniciar la app
+// Al cargar la página solo preparamos los formularios y OCULTAMOS los datos
 document.addEventListener("DOMContentLoaded", () => {
-    cargarInventario();
-    cargarPedidos();
     configurarFormularios();
+    ocultarTablasAlInicio();
 });
+
+// Función para ocultar los contenedores/tablas al entrar a la web
+function ocultarTablasAlInicio() {
+    const tablas = document.querySelectorAll("table");
+    tablas.forEach(tabla => {
+        // Busca la sección o div padre de la tabla para ocultarlo completo
+        const contenedor = tabla.closest("section") || tabla.parentElement;
+        if (contenedor) {
+            contenedor.style.display = "none";
+        }
+    });
+}
+
+// Función para mostrar las tablas tras el inicio de sesión
+function mostrarTablas() {
+    const tablas = document.querySelectorAll("table");
+    tablas.forEach(tabla => {
+        const contenedor = tabla.closest("section") || tabla.parentElement;
+        if (contenedor) {
+            contenedor.style.display = "block";
+        }
+    });
+}
 
 // Obtener y renderizar los equipos de seguridad
 async function cargarInventario() {
@@ -115,8 +136,12 @@ function configurarFormularios() {
             } else {
                 const usuario = usuarios[0];
                 alert(`¡Acceso concedido! Bienvenido/a, ${usuario.nombre}.`);
-                cargarInventario();
-                cargarPedidos();
+                
+                // AHORA SÍ: Mostramos las tablas y traemos los datos de Supabase tras loguearse
+                mostrarTablas();
+                await cargarInventario();
+                await cargarPedidos();
+                
                 loginForm.reset();
             }
         });
